@@ -2,6 +2,7 @@
 
 This repository contains the Sentry plugin for Mach Composer. It requires Mach Composer 3.x
 
+It uses the Terraform provider for Amplience, see https://github.com/labd/terraform-provider-amplience/
 
 ## Usage
 
