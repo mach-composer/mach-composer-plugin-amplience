@@ -10,7 +10,7 @@ import (
 )
 
 func NewAmpliencePlugin() schema.MachComposerPlugin {
-	state := &AmpliencePlugin{
+	state := &Plugin{
 		provider:    "0.3.7",
 		siteConfigs: map[string]*AmplienceConfig{},
 	}
@@ -34,7 +34,7 @@ func NewAmpliencePlugin() schema.MachComposerPlugin {
 	})
 }
 
-type AmpliencePlugin struct {
+type Plugin struct {
 	environment  string
 	provider     string
 	globalConfig *AmplienceConfig
@@ -42,7 +42,7 @@ type AmpliencePlugin struct {
 	enabled      bool
 }
 
-func (p *AmpliencePlugin) Configure(environment string, provider string) error {
+func (p *Plugin) Configure(environment string, provider string) error {
 	p.environment = environment
 	if provider != "" {
 		p.provider = provider
@@ -50,12 +50,12 @@ func (p *AmpliencePlugin) Configure(environment string, provider string) error {
 	return nil
 }
 
-func (p *AmpliencePlugin) GetValidationSchema() (*schema.ValidationSchema, error) {
+func (p *Plugin) GetValidationSchema() (*schema.ValidationSchema, error) {
 	result := getSchema()
 	return result, nil
 }
 
-func (p *AmpliencePlugin) SetGlobalConfig(data map[string]any) error {
+func (p *Plugin) SetGlobalConfig(data map[string]any) error {
 	cfg := AmplienceConfig{}
 	if err := mapstructure.Decode(data, &cfg); err != nil {
 		return err
@@ -65,7 +65,7 @@ func (p *AmpliencePlugin) SetGlobalConfig(data map[string]any) error {
 	return nil
 }
 
-func (p *AmpliencePlugin) SetSiteConfig(site string, data map[string]any) error {
+func (p *Plugin) SetSiteConfig(site string, data map[string]any) error {
 	cfg := AmplienceConfig{}
 	if err := mapstructure.Decode(data, &cfg); err != nil {
 		return err
@@ -75,7 +75,7 @@ func (p *AmpliencePlugin) SetSiteConfig(site string, data map[string]any) error 
 	return nil
 }
 
-func (p *AmpliencePlugin) getSiteConfig(site string) *AmplienceConfig {
+func (p *Plugin) getSiteConfig(site string) *AmplienceConfig {
 	result := &AmplienceConfig{}
 	if p.globalConfig != nil {
 		result.ClientID = p.globalConfig.ClientID
@@ -102,7 +102,7 @@ func (p *AmpliencePlugin) getSiteConfig(site string) *AmplienceConfig {
 	return result
 }
 
-func (p *AmpliencePlugin) TerraformRenderProviders(site string) (string, error) {
+func (p *Plugin) TerraformRenderProviders(site string) (string, error) {
 	result := fmt.Sprintf(`
 	amplience = {
 		source = "labd/amplience"
@@ -111,7 +111,7 @@ func (p *AmpliencePlugin) TerraformRenderProviders(site string) (string, error) 
 	return result, nil
 }
 
-func (p *AmpliencePlugin) TerraformRenderResources(site string) (string, error) {
+func (p *Plugin) TerraformRenderResources(site string) (string, error) {
 	cfg := p.getSiteConfig(site)
 	if cfg == nil {
 		return "", nil
@@ -127,7 +127,7 @@ func (p *AmpliencePlugin) TerraformRenderResources(site string) (string, error) 
 	return helpers.RenderGoTemplate(template, cfg)
 }
 
-func (p *AmpliencePlugin) RenderTerraformComponent(site string, component string) (*schema.ComponentSchema, error) {
+func (p *Plugin) RenderTerraformComponent(site string, component string) (*schema.ComponentSchema, error) {
 	cfg := p.getSiteConfig(site)
 	if cfg == nil {
 		return nil, nil
