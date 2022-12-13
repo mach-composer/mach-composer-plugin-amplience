@@ -21,6 +21,8 @@ func NewAmpliencePlugin() schema.MachComposerPlugin {
 		Configure: state.Configure,
 		IsEnabled: func() bool { return state.enabled },
 
+		GetValidationSchema: state.GetValidationSchema,
+
 		// Config
 		SetGlobalConfig: state.SetGlobalConfig,
 		SetSiteConfig:   state.SetSiteConfig,
@@ -46,6 +48,11 @@ func (p *AmpliencePlugin) Configure(environment string, provider string) error {
 		p.provider = provider
 	}
 	return nil
+}
+
+func (p *AmpliencePlugin) GetValidationSchema() (*schema.ValidationSchema, error) {
+	result := getSchema()
+	return result, nil
 }
 
 func (p *AmpliencePlugin) SetGlobalConfig(data map[string]any) error {
