@@ -103,6 +103,11 @@ func (p *Plugin) getSiteConfig(site string) *AmplienceConfig {
 }
 
 func (p *Plugin) TerraformRenderProviders(site string) (string, error) {
+	cfg := p.getSiteConfig(site)
+	if cfg == nil {
+		return "", nil
+	}
+
 	result := fmt.Sprintf(`
 	amplience = {
 		source = "labd/amplience"
