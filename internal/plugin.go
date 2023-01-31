@@ -124,9 +124,9 @@ func (p *Plugin) TerraformRenderResources(site string) (string, error) {
 
 	template := `
 		provider "amplience" {
-			client_id        = {{ .ClientID|printf "%q" }}
-			client_secret    = {{ .ClientSecret|printf "%q" }}
-			hub_id           = {{ .HubID|printf "%q" }}
+			{{ renderProperty "client_id" .ClientID }}
+			{{ renderProperty "client_secret" .ClientSecret }}
+			{{ renderProperty "hub_id" .HubID }}
 		}
 	`
 	return helpers.RenderGoTemplate(template, cfg)
