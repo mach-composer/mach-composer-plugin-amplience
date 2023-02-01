@@ -1,3 +1,6 @@
+# 0.1.3 (2023-02-01)
+Update the helpers library to 0.0.4
+
 # 0.1.2 (2023-02-01)
 Use the `renderProperty` template function to render hcl properties.
 
