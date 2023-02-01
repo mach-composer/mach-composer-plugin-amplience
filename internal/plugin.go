@@ -139,9 +139,9 @@ func (p *Plugin) RenderTerraformComponent(site string, component string) (*schem
 	}
 
 	template := `
-		amplience_client_id = {{ .ClientID|printf "%q" }}
-		amplience_client_secret = {{ .ClientSecret|printf "%q" }}
-		amplience_hub_id = {{ .HubID|printf "%q" }}
+		{{ renderProperty "amplience_client_id" .ClientID }}
+		{{ renderProperty "amplience_client_secret" .ClientSecret }}
+		{{ renderProperty "amplience_hub_id" .HubID }}
 	`
 	vars, err := helpers.RenderGoTemplate(template, cfg)
 	if err != nil {
