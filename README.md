@@ -10,7 +10,8 @@ It uses the Terraform provider for Amplience, see https://github.com/labd/terraf
 mach_composer:
   plugins:
     amplience:
-      version: latest
+      source: mach-composer/amplience
+      version: 0.1.3
       
 global:
   # ...
@@ -19,7 +20,7 @@ sites:
   - identifier: my-site
     # ...
     amplience:
-      hub_id: hub-id
-      client_id: client-id
-      client_secret: client-secret
+      hub_id: your-hub-id
+      client_id: your-client-id
+      client_secret: your-client-secret
 ```
