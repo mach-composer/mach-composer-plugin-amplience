@@ -15,12 +15,15 @@ mach_composer:
       
 global:
   # ...
+  amplience:
+    client_id: your-client-id
+    client_secret: your-client-secret
   
 sites:
   - identifier: my-site
     # ...
     amplience:
       hub_id: your-hub-id
-      client_id: your-client-id
-      client_secret: your-client-secret
+      client_id: your-client-id # override
+      client_secret: your-client-secret # override
 ```
