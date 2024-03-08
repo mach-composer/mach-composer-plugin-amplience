@@ -2,7 +2,6 @@ package internal
 
 import (
 	"fmt"
-
 	"github.com/mach-composer/mach-composer-plugin-helpers/helpers"
 	"github.com/mach-composer/mach-composer-plugin-sdk/plugin"
 	"github.com/mach-composer/mach-composer-plugin-sdk/schema"
@@ -94,6 +93,7 @@ func (p *Plugin) getSiteConfig(site string) *AmplienceConfig {
 		if cfg.HubID != "" {
 			result.HubID = cfg.HubID
 		}
+		result.ExtraHubs = cfg.ExtraHubs
 	}
 
 	if result.ClientID == "" {
@@ -128,11 +128,20 @@ func (p *Plugin) TerraformRenderResources(site string) (string, error) {
 			{{ renderProperty "client_secret" .ClientSecret }}
 			{{ renderProperty "hub_id" .HubID }}
 		}
+	
+		{{range .ExtraHubs}}
+	    provider "amplience" {
+			{{ renderProperty "alias" .Name }}
+			{{ renderProperty "client_id" .ClientID }}
+			{{ renderProperty "client_secret" .ClientSecret }}
+			{{ renderProperty "hub_id" .HubID }}
+		}
+		{{end}}
 	`
 	return helpers.RenderGoTemplate(template, cfg)
 }
 
-func (p *Plugin) RenderTerraformComponent(site string, component string) (*schema.ComponentSchema, error) {
+func (p *Plugin) RenderTerraformComponent(site string, _ string) (*schema.ComponentSchema, error) {
 	cfg := p.getSiteConfig(site)
 	if cfg == nil {
 		return nil, nil
@@ -142,13 +151,33 @@ func (p *Plugin) RenderTerraformComponent(site string, component string) (*schem
 		{{ renderProperty "amplience_client_id" .ClientID }}
 		{{ renderProperty "amplience_client_secret" .ClientSecret }}
 		{{ renderProperty "amplience_hub_id" .HubID }}
+	
+		{{- range .ExtraHubs }}
+		{{- with $key := printf "amplience_%s_client_id" .Name }}
+			{{ renderProperty . $.ClientID }}
+		{{- end }}
+		{{- with $key := printf "amplience_%s_client_secret" .Name }}
+			{{ renderProperty . $.ClientSecret }}
+		{{- end }}
+		{{- with $key := printf "amplience_%s_hub_id" .Name }}
+			{{ renderProperty . $.HubID }}
+		{{- end }}
+		{{- end }}
 	`
 	vars, err := helpers.RenderGoTemplate(template, cfg)
 	if err != nil {
 		return nil, err
 	}
+
+	var providers = []string{"amplience = amplience"}
+
+	for _, hub := range cfg.ExtraHubs {
+		providers = append(providers, fmt.Sprintf("amplience.%s = amplience.%s", hub.Name, hub.Name))
+	}
+
 	result := &schema.ComponentSchema{
 		Variables: vars,
+		Providers: providers,
 	}
 	return result, nil
 }
