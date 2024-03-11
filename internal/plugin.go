@@ -11,7 +11,7 @@ import (
 func NewAmpliencePlugin() schema.MachComposerPlugin {
 	state := &Plugin{
 		provider:    "0.3.7",
-		siteConfigs: map[string]*AmplienceConfig{},
+		siteConfigs: map[string]*SiteConfig{},
 	}
 
 	return plugin.NewPlugin(&schema.PluginSchema{
@@ -36,8 +36,8 @@ func NewAmpliencePlugin() schema.MachComposerPlugin {
 type Plugin struct {
 	environment  string
 	provider     string
-	globalConfig *AmplienceConfig
-	siteConfigs  map[string]*AmplienceConfig
+	globalConfig *GlobalConfig
+	siteConfigs  map[string]*SiteConfig
 	enabled      bool
 }
 
@@ -55,7 +55,7 @@ func (p *Plugin) GetValidationSchema() (*schema.ValidationSchema, error) {
 }
 
 func (p *Plugin) SetGlobalConfig(data map[string]any) error {
-	cfg := AmplienceConfig{}
+	cfg := GlobalConfig{}
 	if err := mapstructure.Decode(data, &cfg); err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (p *Plugin) SetGlobalConfig(data map[string]any) error {
 }
 
 func (p *Plugin) SetSiteConfig(site string, data map[string]any) error {
-	cfg := AmplienceConfig{}
+	cfg := SiteConfig{}
 	if err := mapstructure.Decode(data, &cfg); err != nil {
 		return err
 	}
@@ -74,38 +74,45 @@ func (p *Plugin) SetSiteConfig(site string, data map[string]any) error {
 	return nil
 }
 
-func (p *Plugin) getSiteConfig(site string) *AmplienceConfig {
-	result := &AmplienceConfig{}
+func (p *Plugin) getSiteConfig(site string) (*SiteConfig, error) {
+	result := &SiteConfig{}
 	if p.globalConfig != nil {
 		result.ClientID = p.globalConfig.ClientID
 		result.ClientSecret = p.globalConfig.ClientSecret
-		result.HubID = p.globalConfig.HubID
 	}
 
 	cfg, ok := p.siteConfigs[site]
-	if ok {
-		if cfg.ClientID != "" {
-			result.ClientID = cfg.ClientID
-		}
-		if cfg.ClientSecret != "" {
-			result.ClientSecret = cfg.ClientSecret
-		}
-		if cfg.HubID != "" {
-			result.HubID = cfg.HubID
-		}
-		result.ExtraHubs = cfg.ExtraHubs
+	if !ok {
+		return nil, NewNoSiteConfigError("site %s not found", site)
 	}
 
-	if result.ClientID == "" {
-		return nil
+	if cfg.HubID == "" && len(cfg.Hubs) == 0 {
+		return nil, NewInvalidSiteConfigError("site %s must have either a hub_id or hubs set", site)
 	}
-	return result
+
+	if cfg.HubID != "" && len(cfg.Hubs) > 0 {
+		return nil, NewInvalidSiteConfigError("site %s cannot have both hub_id and hubs set", site)
+	}
+
+	if cfg.ClientID != "" {
+		result.ClientID = cfg.ClientID
+	}
+	if cfg.ClientSecret != "" {
+		result.ClientSecret = cfg.ClientSecret
+	}
+	if cfg.HubID != "" {
+		result.HubID = cfg.HubID
+	}
+
+	result.Hubs = cfg.Hubs
+
+	return result, nil
 }
 
 func (p *Plugin) TerraformRenderProviders(site string) (string, error) {
-	cfg := p.getSiteConfig(site)
-	if cfg == nil {
-		return "", nil
+	_, err := p.getSiteConfig(site)
+	if err != nil {
+		return "", err
 	}
 
 	result := fmt.Sprintf(`
@@ -117,51 +124,51 @@ func (p *Plugin) TerraformRenderProviders(site string) (string, error) {
 }
 
 func (p *Plugin) TerraformRenderResources(site string) (string, error) {
-	cfg := p.getSiteConfig(site)
-	if cfg == nil {
-		return "", nil
+	cfg, err := p.getSiteConfig(site)
+	if err != nil {
+		return "", err
 	}
 
 	template := `
-		provider "amplience" {
-			{{ renderProperty "client_id" .ClientID }}
-			{{ renderProperty "client_secret" .ClientSecret }}
-			{{ renderProperty "hub_id" .HubID }}
-		}
-	
-		{{range .ExtraHubs}}
+		{{- if .IsMultiHub }}
+		{{- range .Hubs }}
 	    provider "amplience" {
 			{{ renderProperty "alias" .Name }}
 			{{ renderProperty "client_id" .ClientID }}
 			{{ renderProperty "client_secret" .ClientSecret }}
 			{{ renderProperty "hub_id" .HubID }}
 		}
-		{{end}}
+		{{- end }}
+		{{- else }}
+		provider "amplience" {
+			{{ renderProperty "client_id" .ClientID }}
+			{{ renderProperty "client_secret" .ClientSecret }}
+			{{ renderProperty "hub_id" .HubID }}
+		}
+		{{- end }}
 	`
 	return helpers.RenderGoTemplate(template, cfg)
 }
 
 func (p *Plugin) RenderTerraformComponent(site string, _ string) (*schema.ComponentSchema, error) {
-	cfg := p.getSiteConfig(site)
-	if cfg == nil {
-		return nil, nil
+	cfg, err := p.getSiteConfig(site)
+	if err != nil {
+		return nil, err
 	}
 
 	template := `
-		{{ renderProperty "amplience_client_id" .ClientID }}
-		{{ renderProperty "amplience_client_secret" .ClientSecret }}
-		{{ renderProperty "amplience_hub_id" .HubID }}
 	
-		{{- range .ExtraHubs }}
-		{{- with $key := printf "amplience_%s_client_id" .Name }}
-			{{ renderProperty . $.ClientID }}
-		{{- end }}
-		{{- with $key := printf "amplience_%s_client_secret" .Name }}
-			{{ renderProperty . $.ClientSecret }}
-		{{- end }}
-		{{- with $key := printf "amplience_%s_hub_id" .Name }}
-			{{ renderProperty . $.HubID }}
-		{{- end }}
+		{{- if .IsMultiHub }}
+			{{- range .Hubs }}
+				{{ $t := printf "amplience_%s_client_id" .Name }} {{ renderProperty $t .ClientID }}
+				{{ $t := printf "amplience_%s_client_secret" .Name }} {{ renderProperty $t .ClientSecret }}
+				{{ $t := printf "amplience_%s_hub_id" .Name }} {{ renderProperty $t .HubID }}
+			{{- end }}
+		
+		{{- else }}
+			{{ renderProperty "amplience_client_id" .ClientID }}
+			{{ renderProperty "amplience_client_secret" .ClientSecret }}
+			{{ renderProperty "amplience_hub_id" .HubID }}
 		{{- end }}
 	`
 	vars, err := helpers.RenderGoTemplate(template, cfg)
@@ -169,10 +176,11 @@ func (p *Plugin) RenderTerraformComponent(site string, _ string) (*schema.Compon
 		return nil, err
 	}
 
-	var providers = []string{"amplience = amplience"}
-
-	for _, hub := range cfg.ExtraHubs {
-		providers = append(providers, fmt.Sprintf("amplience.%s = amplience.%s", hub.Name, hub.Name))
+	var providers []string
+	if cfg.IsMultiHub() {
+		for _, hub := range cfg.Hubs {
+			providers = append(providers, fmt.Sprintf("amplience.%s = amplience.%s", hub.Name, hub.Name))
+		}
 	}
 
 	result := &schema.ComponentSchema{
