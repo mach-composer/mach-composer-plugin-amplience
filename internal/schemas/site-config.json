@@ -1,19 +1,46 @@
 {
-    "type": "object",
-    "description": "Amplience settings.",
-    "additionalProperties": false,
-    "required": [
-        "hub_id"
-    ],
-    "properties": {
-        "hub_id": {
+  "type": "object",
+  "description": "Amplience settings.",
+  "additionalProperties": false,
+  "properties": {
+    "hub_id": {
+      "description": "The hub id to use for the Amplience integration. Either this must be set or the `hubs` array must be set.",
+      "type": "string"
+    },
+    "client_id": {
+      "description": "The client id to use for the Amplience integration.",
+      "type": "string"
+    },
+    "client_secret": {
+      "description": "The client secret to use for the Amplience integration.",
+      "type": "string"
+    },
+    "hubs": {
+      "description": "Hubs to use for the Amplience integration. Either this must be set or the `hub_id` must be set.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "hub_id",
+          "client_id",
+          "client_secret"
+        ],
+        "properties": {
+          "name": {
             "type": "string"
-        },
-        "client_id": {
+          },
+          "hub_id": {
             "type": "string"
-        },
-        "client_secret": {
+          },
+          "client_id": {
             "type": "string"
+          },
+          "client_secret": {
+            "type": "string"
+          }
         }
+      }
     }
+  }
 }

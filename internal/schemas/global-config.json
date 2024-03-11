@@ -1,9 +1,5 @@
 {
     "type": "object",
-    "required": [
-        "client_id",
-        "client_secret"
-    ],
     "additionalProperties": false,
     "properties": {
         "client_id": {
