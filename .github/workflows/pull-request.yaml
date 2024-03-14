@@ -7,7 +7,6 @@ permissions:
   pull-requests: write
   actions: write
 
-# TODO: add check if changie file is set
 jobs:
   test:
     runs-on: ubuntu-latest
