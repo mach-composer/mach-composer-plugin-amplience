@@ -1,0 +1,4 @@
+kind: Dependency
+body: 'chore(deps): bump github.com/stretchr/testify from 1.8.1 to 1.9.0 in the go
+  group'
+time: 2024-05-10T14:20:41.622340865Z
