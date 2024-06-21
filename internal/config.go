@@ -22,3 +22,12 @@ type HubConfig struct {
 func (s *SiteConfig) IsMultiHub() bool {
 	return len(s.Hubs) > 0
 }
+
+func (s *SiteConfig) GetHubConfig(name string) *HubConfig {
+	for _, hub := range s.Hubs {
+		if hub.Name == name {
+			return &hub
+		}
+	}
+	return nil
+}

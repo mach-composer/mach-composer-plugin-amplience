@@ -27,8 +27,8 @@ func NewAmpliencePlugin() schema.MachComposerPlugin {
 		SetSiteConfig:   state.SetSiteConfig,
 
 		// Renders
-		RenderTerraformProviders: state.TerraformRenderProviders,
-		RenderTerraformResources: state.TerraformRenderResources,
+		RenderTerraformProviders: state.RenderTerraformProviders,
+		RenderTerraformResources: state.RenderTerraformResources,
 		RenderTerraformComponent: state.RenderTerraformComponent,
 	})
 }
@@ -69,6 +69,15 @@ func (p *Plugin) SetSiteConfig(site string, data map[string]any) error {
 	if err := mapstructure.Decode(data, &cfg); err != nil {
 		return err
 	}
+
+	if cfg.HubID == "" && len(cfg.Hubs) == 0 {
+		return NewInvalidSiteConfigError("site %s must have either a hub_id or hubs set", site)
+	}
+
+	if cfg.HubID != "" && len(cfg.Hubs) > 0 {
+		return NewInvalidSiteConfigError("site %s cannot have both hub_id and hubs set", site)
+	}
+
 	p.siteConfigs[site] = &cfg
 	p.enabled = true
 	return nil
@@ -86,14 +95,6 @@ func (p *Plugin) getSiteConfig(site string) (*SiteConfig, error) {
 		return nil, NewNoSiteConfigError("site %s not found", site)
 	}
 
-	if cfg.HubID == "" && len(cfg.Hubs) == 0 {
-		return nil, NewInvalidSiteConfigError("site %s must have either a hub_id or hubs set", site)
-	}
-
-	if cfg.HubID != "" && len(cfg.Hubs) > 0 {
-		return nil, NewInvalidSiteConfigError("site %s cannot have both hub_id and hubs set", site)
-	}
-
 	if cfg.ClientID != "" {
 		result.ClientID = cfg.ClientID
 	}
@@ -109,7 +110,7 @@ func (p *Plugin) getSiteConfig(site string) (*SiteConfig, error) {
 	return result, nil
 }
 
-func (p *Plugin) TerraformRenderProviders(site string) (string, error) {
+func (p *Plugin) RenderTerraformProviders(site string) (string, error) {
 	_, err := p.getSiteConfig(site)
 	if err != nil {
 		return "", err
@@ -123,7 +124,7 @@ func (p *Plugin) TerraformRenderProviders(site string) (string, error) {
 	return result, nil
 }
 
-func (p *Plugin) TerraformRenderResources(site string) (string, error) {
+func (p *Plugin) RenderTerraformResources(site string) (string, error) {
 	cfg, err := p.getSiteConfig(site)
 	if err != nil {
 		return "", err
@@ -150,37 +151,46 @@ func (p *Plugin) TerraformRenderResources(site string) (string, error) {
 	return helpers.RenderGoTemplate(template, cfg)
 }
 
-func (p *Plugin) RenderTerraformComponent(site string, _ string) (*schema.ComponentSchema, error) {
-	cfg, err := p.getSiteConfig(site)
+type tplConfig struct {
+	ClientID     string
+	ClientSecret string
+	HubID        string
+}
+
+func (p *Plugin) RenderTerraformComponent(site string, component string) (*schema.ComponentSchema, error) {
+	siteConfig, err := p.getSiteConfig(site)
 	if err != nil {
 		return nil, err
 	}
 
-	template := `
-	
-		{{- if .IsMultiHub }}
-			{{- range .Hubs }}
-				{{ $t := printf "amplience_%s_client_id" .Name }} {{ renderProperty $t .ClientID }}
-				{{ $t := printf "amplience_%s_client_secret" .Name }} {{ renderProperty $t .ClientSecret }}
-				{{ $t := printf "amplience_%s_hub_id" .Name }} {{ renderProperty $t .HubID }}
-			{{- end }}
-		
-		{{- else }}
-			{{ renderProperty "amplience_client_id" .ClientID }}
-			{{ renderProperty "amplience_client_secret" .ClientSecret }}
-			{{ renderProperty "amplience_hub_id" .HubID }}
-		{{- end }}
-	`
-	vars, err := helpers.RenderGoTemplate(template, cfg)
-	if err != nil {
-		return nil, err
+	tplData := tplConfig{
+		ClientID:     siteConfig.ClientID,
+		ClientSecret: siteConfig.ClientSecret,
+		HubID:        siteConfig.HubID,
 	}
 
 	var providers []string
-	if cfg.IsMultiHub() {
-		for _, hub := range cfg.Hubs {
-			providers = append(providers, fmt.Sprintf("amplience.%s = amplience.%s", hub.Name, hub.Name))
+	if siteConfig.IsMultiHub() {
+		hubCfg := siteConfig.GetHubConfig(component)
+		if hubCfg == nil {
+			return nil, NewNoHubConfigError("hub %s not found in site %s. A hub must exist with the same name as the component", component, site)
 		}
+
+		tplData.ClientID = hubCfg.ClientID
+		tplData.ClientSecret = hubCfg.ClientSecret
+		tplData.HubID = hubCfg.HubID
+
+		providers = append(providers, fmt.Sprintf("amplience = amplience.%s", component))
+	}
+
+	template := `
+		{{ renderProperty "amplience_client_id" .ClientID }}
+		{{ renderProperty "amplience_client_secret" .ClientSecret }}
+		{{ renderProperty "amplience_hub_id" .HubID }}
+	`
+	vars, err := helpers.RenderGoTemplate(template, tplData)
+	if err != nil {
+		return nil, err
 	}
 
 	result := &schema.ComponentSchema{

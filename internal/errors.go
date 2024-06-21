@@ -25,3 +25,15 @@ func NewInvalidSiteConfigError(format string, a ...any) *InvalidSiteConfigError 
 func (n *InvalidSiteConfigError) Error() string {
 	return n.msg
 }
+
+type NoHubConfigError struct {
+	msg string
+}
+
+func NewNoHubConfigError(format string, a ...any) *NoHubConfigError {
+	return &NoHubConfigError{msg: fmt.Sprintf(format, a...)}
+}
+
+func (n *NoHubConfigError) Error() string {
+	return n.msg
+}

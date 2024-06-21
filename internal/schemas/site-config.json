@@ -28,15 +28,19 @@
         ],
         "properties": {
           "name": {
+            "description": "The hub name. Will be linked to the component with the same name.",
             "type": "string"
           },
           "hub_id": {
+            "description": "The hub id to use for the Amplience integration. Either this must be set or the `hubs` array must be set.",
             "type": "string"
           },
           "client_id": {
+            "description": "The client id to use for the Amplience integration.",
             "type": "string"
           },
           "client_secret": {
+            "description": "The client secret to use for the Amplience integration.",
             "type": "string"
           }
         }
