@@ -134,7 +134,7 @@ func (p *Plugin) RenderTerraformResources(site string) (string, error) {
 		{{- if .IsMultiHub }}
 		{{- range .Hubs }}
 	    provider "amplience" {
-			{{ renderProperty "alias" .Name }}
+			{{if ne .Name "amplience" }}{{ renderProperty "alias" .Name }}{{ end }} 
 			{{ renderProperty "client_id" .ClientID }}
 			{{ renderProperty "client_secret" .ClientSecret }}
 			{{ renderProperty "hub_id" .HubID }}
@@ -180,7 +180,9 @@ func (p *Plugin) RenderTerraformComponent(site string, component string) (*schem
 		tplData.ClientSecret = hubCfg.ClientSecret
 		tplData.HubID = hubCfg.HubID
 
-		providers = append(providers, fmt.Sprintf("amplience = amplience.%s", component))
+		if component != "amplience" {
+			providers = append(providers, fmt.Sprintf("amplience = amplience.%s", component))
+		}
 	}
 
 	template := `
