@@ -43,7 +43,7 @@ jobs:
           cp coverage.out output/coverage.out
 
       - name: Upload to codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -52,7 +52,7 @@ jobs:
           path: output/**/*
 
       - name: build binary
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           args: build --snapshot --clean --single-target
         env:
