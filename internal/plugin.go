@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+
 	"github.com/mach-composer/mach-composer-plugin-helpers/helpers"
 	"github.com/mach-composer/mach-composer-plugin-sdk/plugin"
 	"github.com/mach-composer/mach-composer-plugin-sdk/schema"
