@@ -1,6 +1,6 @@
 name: Run tests
 
-on: [ pull_request ]
+on: [pull_request]
 
 permissions:
   contents: write
@@ -34,7 +34,7 @@ jobs:
         uses: mach-composer/check-changie-changes-action@7a4054d1842bb867a0a2c459f154f821e7a50cc2 # main
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84 # v6.5.2
+        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
         with:
           args: --issues-exit-code=0 --timeout=5m
 
